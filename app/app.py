@@ -82,7 +82,13 @@ def create_app():
     @app.route('/api/people/<person_id>/faces')
     def get_person_faces(person_id):
         try:
+            page = request.args.get('page', 1, type=int)
+            page_size = request.args.get('pageSize', 20, type=int) # Default to 20 faces per page
+
             # Step 1: Get assets for the person
+            # Immich API does not directly support pagination for faces within a person object.
+            # We need to fetch all assets for the person, then all faces from those assets,
+            # and then apply pagination on our side.
             assets_url = f"{Config.IMMICH_API_URL}/api/assets?personId={person_id}"
             headers = {"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"}
             assets_response = requests.get(assets_url, headers=headers)
@@ -105,22 +111,25 @@ def create_app():
                     for face in asset_detail['faces']:
                         # Ensure the face belongs to the requested person
                         if face.get('personId') == person_id:
-                            # Construct thumbnail URL for the face
-                            # Immich provides a specific endpoint for face thumbnails
-                            face_thumbnail_url = f"{Config.IMMICH_API_URL}/api/people/{person_id}/thumbnail" # This might be for person thumbnail, not individual face. Need to verify.
-                            # A more likely path for individual face thumbnail might be:
-                            # f"{Config.IMMICH_API_URL}/api/assets/{asset_id}/thumbnail?faceId={face.get('id')}"
-                            # Or, if the face object itself contains a direct thumbnail URL: face.get('thumbnailUrl')
-
-                            # For now, let's just return the face object as is, and we'll refine thumbnail later
                             all_faces.append({
                                 'id': face.get('id'),
                                 'assetId': asset_id,
                                 'personId': face.get('personId'),
                                 'boundingBox': face.get('boundingBox'),
-                                'thumbnailUrl': f"{Config.IMMICH_API_URL}/api/faces/{face.get('id')}/thumbnail" # This is a guess based on common API patterns
+                                'thumbnailUrl': f"{Config.IMMICH_API_URL}/api/faces/{face.get('id')}/thumbnail"
                             })
-            return jsonify(all_faces)
+            
+            total_faces = len(all_faces)
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_faces = all_faces[start_index:end_index]
+
+            return jsonify({
+                "faces": paginated_faces,
+                "totalFaces": total_faces,
+                "page": page,
+                "pageSize": page_size
+            })
         except requests.exceptions.RequestException as e:
             app.logger.error(f"Error fetching faces for person {person_id} from Immich: {e}")
             return jsonify({"error": f"Could not fetch faces for person {person_id} from Immich: {e}"}), 500

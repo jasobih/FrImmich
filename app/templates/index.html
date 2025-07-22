@@ -109,9 +109,14 @@
             const selectAllFacesBtn = document.getElementById('selectAllFacesBtn');
             const deselectAllFacesBtn = document.getElementById('deselectAllFacesBtn');
             const saveCuratedFacesBtn = document.getElementById('saveCuratedFacesBtn');
+            const loadMoreFacesBtn = document.getElementById('loadMoreFacesBtn');
+            const facesCountDisplay = document.getElementById('facesCountDisplay');
 
             let currentPersonIdForModal = null;
             let curatedFaces = {}; // Stores {personId: [faceId1, faceId2, ...]}
+            let currentPage = 1;
+            const pageSize = 20; // Number of faces to load per page
+            let totalFacesAvailable = 0;
 
             // Theme Toggle Logic
             const currentTheme = localStorage.getItem('theme') || 'light';
@@ -171,7 +176,11 @@
                                 const personName = event.target.dataset.personName;
                                 currentPersonIdForModal = personId;
                                 modalPersonName.textContent = `Curate Faces for ${personName}`;
-                                fetchAndDisplayFaces(personId);
+                                currentPage = 1; // Reset page for new person
+                                personFacesGrid.innerHTML = ''; // Clear previous faces
+                                loadMoreFacesBtn.style.display = 'none'; // Hide load more initially
+                                facesCountDisplay.textContent = ''; // Clear count
+                                fetchAndDisplayFaces(personId, currentPage);
                                 faceCurationModal.style.display = 'block';
                             });
                         });
@@ -181,19 +190,26 @@
                     });
             };
 
-            // Function to fetch and display faces for a specific person
-            const fetchAndDisplayFaces = (personId) => {
-                personFacesGrid.innerHTML = '<p>Loading faces...</p>';
-                fetch(`/api/people/${personId}/faces`)
+            // Function to fetch and display faces for a specific person with pagination
+            const fetchAndDisplayFaces = (personId, page) => {
+                personFacesGrid.insertAdjacentHTML('beforeend', '<p class="loading-faces-message">Loading faces...</p>');
+                loadMoreFacesBtn.disabled = true;
+
+                fetch(`/api/people/${personId}/faces?page=${page}&pageSize=${pageSize}`)
                     .then(res => res.json())
-                    .then(faces => {
-                        personFacesGrid.innerHTML = ''; // Clear loading message
-                        if (faces.error) {
-                            personFacesGrid.innerHTML = `<p class="error-message">Error loading faces: ${faces.error}</p>`;
+                    .then(data => {
+                        personFacesGrid.querySelector('.loading-faces-message')?.remove(); // Remove loading message
+                        if (data.error) {
+                            personFacesGrid.innerHTML = `<p class="error-message">Error loading faces: ${data.error}</p>`;
                             return;
                         }
-                        if (faces.length === 0) {
+                        const faces = data.faces;
+                        totalFacesAvailable = data.totalFaces;
+
+                        if (faces.length === 0 && page === 1) {
                             personFacesGrid.innerHTML = '<p>No faces found for this person.</p>';
+                            loadMoreFacesBtn.style.display = 'none';
+                            facesCountDisplay.textContent = '';
                             return;
                         }
 
@@ -210,11 +226,32 @@
                             `;
                             personFacesGrid.appendChild(faceDiv);
                         });
+
+                        // Update faces count display
+                        const loadedFacesCount = personFacesGrid.querySelectorAll('.face-item').length;
+                        facesCountDisplay.textContent = `Loaded ${loadedFacesCount} of ${totalFacesAvailable} faces`;
+
+                        // Show/hide load more button
+                        if (loadedFacesCount < totalFacesAvailable) {
+                            loadMoreFacesBtn.style.display = 'block';
+                            loadMoreFacesBtn.disabled = false;
+                        } else {
+                            loadMoreFacesBtn.style.display = 'none';
+                        }
                     })
                     .catch(error => {
+                        personFacesGrid.querySelector('.loading-faces-message')?.remove();
                         personFacesGrid.innerHTML = `<p class="error-message">Network error fetching faces: ${error}</p>`;
+                        loadMoreFacesBtn.style.display = 'none';
+                        facesCountDisplay.textContent = '';
                     });
             };
+
+            // Load More Faces button event listener
+            loadMoreFacesBtn.addEventListener('click', () => {
+                currentPage++;
+                fetchAndDisplayFaces(currentPersonIdForModal, currentPage);
+            });
 
             // Modal close button
             closeModalButton.addEventListener('click', () => {
