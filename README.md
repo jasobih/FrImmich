@@ -144,8 +144,9 @@ Before running the container, you need to gather the following information:
 
 3.  **Run Docker Compose** from the same directory as your `docker-compose.yml`:
     ```bash
-    docker compose up -d --build
+    docker compose up -d
     ```
+    *(This will automatically pull the `ghcr.io/jasobih/frimmich:latest` image and start the container.)*
 
 ### Using Docker CLI
 
