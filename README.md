@@ -59,6 +59,7 @@ In essence, `Frimmich` ensures Frigate *knows who people are* based on your Immi
 - **Immich:** A running Immich instance where you have already named people.
 - **Frigate:** A running Frigate instance (version 0.16.0+).
 - **Network Access:** Immich and Frigate should be accessible to the `Frimmich` container over the network.
+- **Tailscale (Recommended):** For secure and easy network access between your Frimmich container, Immich, and Frigate, especially if they are on different subnets or behind NAT. Using Tailscale simplifies network configuration and avoids complex port forwarding.
 
 ## Setup & Configuration
 
