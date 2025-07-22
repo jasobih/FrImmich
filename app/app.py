@@ -39,9 +39,9 @@ def create_app():
     # Function to be scheduled
     def scheduled_sync_job():
         app.logger.info("Attempting scheduled sync...")
-        # For scheduled syncs, we process all people (no specific person_ids)
+        # For scheduled syncs, we process all people (no specific person_ids or max_faces)
         if status_manager.start_sync():
-            sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, None,))
+            sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, None, None,))
             sync_thread.start()
         else:
             app.logger.info("Scheduled sync skipped: A sync is already in progress.")
@@ -81,13 +81,14 @@ def create_app():
 
     @app.route('/trigger_sync', methods=['POST'])
     def trigger_sync():
-        person_ids = request.json.get('person_ids', None) # Get selected person_ids
+        # Expects a list of dictionaries: [{id: "person_id", max_faces: 100}]
+        selected_people_data = request.json.get('people', None) 
 
         if not status_manager.start_sync():
             return jsonify({"error": "Sync already in progress."}), 409
 
-        # Run the sync logic in a background thread, passing selected person_ids
-        sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, person_ids,))
+        # Run the sync logic in a background thread, passing selected people data
+        sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, selected_people_data,))
         sync_thread.start()
         
         return jsonify({"message": "Sync started."}), 202

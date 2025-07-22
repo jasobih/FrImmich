@@ -8,7 +8,7 @@ from .state_manager import StateManager
 from .mqtt_client import mqtt_client # Import the MQTT client
 
 # This function will be the main entry point for the background thread.
-def run_sync(app, status_manager, selected_person_ids=None):
+def run_sync(app, status_manager, selected_people_data=None):
     with app.app_context(): # Needed to access app.logger
         state_manager = StateManager(Config.STATE_FILE)
         
@@ -25,21 +25,32 @@ def run_sync(app, status_manager, selected_person_ids=None):
             all_people = response.json()
             status_manager.add_log(f"INFO: Found {len(all_people)} people in Immich.")
 
-            # Filter people if specific IDs are selected
-            if selected_person_ids is not None:
-                people = [p for p in all_people if p['id'] in selected_person_ids]
-                status_manager.add_log(f"INFO: Syncing {len(people)} selected people.")
-            else:
-                people = all_people
-                status_manager.add_log(f"INFO: Syncing all {len(people)} people.")
+            # Prepare people to process based on selection and global config
+            people_to_process = []
+            if selected_people_data is not None: # Manual sync with selection
+                selected_ids = {p['id'] for p in selected_people_data}
+                selected_limits = {p['id']: p.get('max_faces', Config.MAX_FACES_PER_PERSON) for p in selected_people_data}
+                
+                for p in all_people:
+                    if p['id'] in selected_ids:
+                        p['max_faces'] = selected_limits[p['id']]
+                        people_to_process.append(p)
+                status_manager.add_log(f"INFO: Syncing {len(people_to_process)} selected people.")
+            else: # Scheduled sync or manual sync without selection (sync all)
+                for p in all_people:
+                    p['max_faces'] = Config.MAX_FACES_PER_PERSON # Apply global limit
+                    people_to_process.append(p)
+                status_manager.add_log(f"INFO: Syncing all {len(people_to_process)} people.")
 
             trained_count = 0
             skipped_count = 0
             failed_count = 0
             total_faces_processed_overall = 0
 
-            for i, person in enumerate(people):
+            for i, person in enumerate(people_to_process):
                 person_name = person.get('name', 'Unknown')
+                person_max_faces = person.get('max_faces', Config.MAX_FACES_PER_PERSON) # Get specific limit or global
+
                 if not person_name:
                     status_manager.add_log(f"WARN: Skipping person with no name (ID: {person['id']}).")
                     continue
@@ -52,9 +63,9 @@ def run_sync(app, status_manager, selected_person_ids=None):
                 faces_response.raise_for_status()
                 faces = faces_response.json()
 
-                # Limit faces per person
-                faces_to_process = faces[:Config.MAX_FACES_PER_PERSON]
-                status_manager.add_log(f"DEBUG: Processing {len(faces_to_process)} faces for {person_name} (max {Config.MAX_FACES_PER_PERSON}).")
+                # Limit faces per person based on selected_people_data or global config
+                faces_to_process = faces[:person_max_faces]
+                status_manager.add_log(f"DEBUG: Processing {len(faces_to_process)} faces for {person_name} (max {person_max_faces}).")
 
                 person_faces_processed = 0
                 for face in faces_to_process:

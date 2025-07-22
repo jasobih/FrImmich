@@ -69,7 +69,8 @@ Before running the container, you need to gather the following information:
     - Get the API Key from your Immich UI: `Account Settings` -> `API Keys` -> `New API Key`.
 2.  **Frigate Faces Directory:**
     - This is the absolute path to the `clips/faces` directory within your Frigate media volume.
-    - For example, if your Frigate `media` volume is mounted at `/opt/frigate/media`, then the faces directory would be `/opt/frigate/media/clips/faces`.
+    - **Example:** If your Frigate `media` volume is mounted at `/mnt/frigate/media`, then the faces directory would be `/mnt/frigate/media/clips/faces`.
+    - **Important:** Ensure this directory exists on your host. If not, create it: `mkdir -p /path/to/your/frigate/media/clips/faces`.
 
 ### Environment Variables
 

@@ -11,6 +11,7 @@
         <header>
             <h1>Immich-Frigate Face Sync</h1>
             <p class="version">Version: 0.1.0</p>
+            <button id="themeToggle" class="theme-toggle">Toggle Theme</button>
         </header>
 
         <section class="config-display card">
@@ -31,8 +32,10 @@
             <div id="peopleList" class="people-list">
                 <p>Loading people from Immich...</p>
             </div>
-            <button id="selectAllBtn" class="select-btn">Select All</button>
-            <button id="deselectAllBtn" class="select-btn">Deselect All</button>
+            <div class="people-actions">
+                <button id="selectAllBtn" class="select-btn">Select All</button>
+                <button id="deselectAllBtn" class="select-btn">Deselect All</button>
+            </div>
         </section>
 
         <section class="actions">
@@ -61,6 +64,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const themeToggle = document.getElementById('themeToggle');
             const syncBtn = document.getElementById('syncBtn');
             const statusArea = document.getElementById('statusArea');
             const summaryArea = document.getElementById('summaryArea').firstElementChild;
@@ -70,6 +74,23 @@
             const peopleList = document.getElementById('peopleList');
             const selectAllBtn = document.getElementById('selectAllBtn');
             const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+            // Theme Toggle Logic
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            document.body.className = currentTheme;
+            themeToggle.textContent = currentTheme === 'dark' ? 'Light Theme' : 'Dark Theme';
+
+            themeToggle.addEventListener('click', () => {
+                let theme = document.body.className;
+                if (theme === 'light') {
+                    theme = 'dark';
+                } else {
+                    theme = 'light';
+                }
+                document.body.className = theme;
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? 'Light Theme' : 'Dark Theme';
+            });
 
             let allPeople = []; // To store the fetched people data
 
@@ -90,6 +111,7 @@
                             div.innerHTML = `
                                 <input type="checkbox" id="person-${person.id}" value="${person.id}">
                                 <label for="person-${person.id}">${person.name}</label>
+                                <input type="number" class="max-faces-input" min="1" value="{{ config.MAX_FACES_PER_PERSON }}" data-person-id="${person.id}">
                             `;
                             peopleList.appendChild(div);
                         });
@@ -115,10 +137,15 @@
             });
 
             syncBtn.addEventListener('click', () => {
-                const selectedPersonIds = Array.from(peopleList.querySelectorAll('input[type="checkbox"]:checked'))
-                                            .map(checkbox => checkbox.value);
-                
-                if (selectedPersonIds.length === 0) {
+                const selectedPeople = [];
+                peopleList.querySelectorAll('.person-item input[type="checkbox"]:checked').forEach(checkbox => {
+                    const personId = checkbox.value;
+                    const maxFacesInput = peopleList.querySelector(`.max-faces-input[data-person-id="${personId}"]`);
+                    const maxFaces = maxFacesInput ? parseInt(maxFacesInput.value, 10) : {{ config.MAX_FACES_PER_PERSON }};
+                    selectedPeople.push({ id: personId, max_faces: maxFaces });
+                });
+                                            
+                if (selectedPeople.length === 0) {
                     alert('Please select at least one person to sync.');
                     return;
                 }
@@ -130,7 +157,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ person_ids: selectedPersonIds })
+                    body: JSON.stringify({ people: selectedPeople })
                 });
             });
 
@@ -157,14 +184,14 @@
                             const percent = (data.processed_faces_count / data.total_faces_to_process) * 100;
                             progressBar.style.width = `${percent}%`;
                             progressText.textContent = `Processing ${data.current_person}: ${data.processed_faces_count} of ${data.total_faces_to_process} faces (${percent.toFixed(1)}%)`;
-                            progressBar.style.backgroundColor = '#2ecc71'; // Green when in progress
+                            progressBar.style.backgroundColor = 'var(--progress-bar-fill)';
                         } else if (data.in_progress) {
                             progressBar.style.width = '100%';
-                            progressBar.style.backgroundColor = '#f39c12'; // Orange for indeterminate
+                            progressBar.style.backgroundColor = 'var(--progress-bar-indeterminate)';
                             progressText.textContent = 'Initializing sync...';
                         } else {
                             progressBar.style.width = '0%';
-                            progressBar.style.backgroundColor = '#ccc'; // Gray when idle
+                            progressBar.style.backgroundColor = 'var(--progress-bar-bg)';
                             progressText.textContent = '';
                         }
                     });
