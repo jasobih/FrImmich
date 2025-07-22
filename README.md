@@ -2,7 +2,11 @@
 
 ## Overview
 
-Frimmich provides a web UI to synchronize named faces from an **Immich** instance directly to your **Frigate** NVR's native face recognition system. This allows Frigate to use the names you've already assigned in Immich for real-time facial recognition.
+**Tired of manually training faces in Frigate? Already spent hours naming everyone in your Immich photo library?**
+
+Frimmich bridges the gap! It provides a web UI to synchronize named faces from your **Immich** instance directly to your **Frigate** NVR's native face recognition system. This allows Frigate to use the high-quality, already-trained faces from your personal photo collection for real-time facial recognition in your CCTV feeds.
+
+**Why do it twice?** Leverage your existing Immich data to speed up your Frigate setup and get more accurate notifications, without the tedious manual work.
 
 This tool acts as the bridge between your photo library and your security system, leveraging Frigate's built-in capabilities.
 
@@ -27,6 +31,17 @@ This application is specifically designed to integrate with **Frigate's native b
 - You want to easily import already named faces from Immich into Frigate.
 
 **`Frimmich` does NOT use Double Take.** This design moves away from external face recognition services like Double Take, focusing on Frigate's integrated capabilities.
+
+## Complementary Tools: Frigate+ for Enhanced Accuracy
+
+While `Frimmich` handles the crucial task of populating Frigate's known faces database with high-quality, named images from your Immich library, **Frigate+** can further enhance the overall accuracy of your facial recognition system.
+
+Frigate+ is a paid service that offers custom model training, allowing Frigate to become even better at detecting and recognizing faces (and other objects) in your specific camera environments. By improving Frigate's core detection capabilities, Frigate+ indirectly benefits `Frimmich`'s purpose:
+
+-   **Improved Face Detection:** A more accurate Frigate (thanks to Frigate+) will provide better initial face crops, leading to more reliable recognition.
+-   **Enhanced Recognition Performance:** When Frigate's underlying models are more finely tuned, the faces trained by `Frimmich` will be recognized with higher confidence and fewer false positives.
+
+In essence, `Frimmich` ensures Frigate *knows who people are* based on your Immich data, while Frigate+ helps Frigate *see and understand faces better* in your unique setup. Together, they provide a powerful and accurate facial recognition solution for your self-hosted NVR.
 
 ## Features
 
