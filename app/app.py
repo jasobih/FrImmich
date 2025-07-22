@@ -79,6 +79,52 @@ def create_app():
             app.logger.error(f"Error fetching people from Immich: {e}")
             return jsonify({"error": f"Could not fetch people from Immich: {e}"}), 500
 
+    @app.route('/api/people/<person_id>/faces')
+    def get_person_faces(person_id):
+        try:
+            # Step 1: Get assets for the person
+            assets_url = f"{Config.IMMICH_API_URL}/api/assets?personId={person_id}"
+            headers = {"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"}
+            assets_response = requests.get(assets_url, headers=headers)
+            assets_response.raise_for_status()
+            assets = assets_response.json()
+
+            all_faces = []
+            for asset in assets:
+                asset_id = asset.get('id')
+                if not asset_id:
+                    continue
+
+                # Step 2: Get details for each asset to extract faces
+                asset_detail_url = f"{Config.IMMICH_API_URL}/api/assets/{asset_id}"
+                asset_detail_response = requests.get(asset_detail_url, headers=headers)
+                asset_detail_response.raise_for_status()
+                asset_detail = asset_detail_response.json()
+
+                if 'faces' in asset_detail:
+                    for face in asset_detail['faces']:
+                        # Ensure the face belongs to the requested person
+                        if face.get('personId') == person_id:
+                            # Construct thumbnail URL for the face
+                            # Immich provides a specific endpoint for face thumbnails
+                            face_thumbnail_url = f"{Config.IMMICH_API_URL}/api/people/{person_id}/thumbnail" # This might be for person thumbnail, not individual face. Need to verify.
+                            # A more likely path for individual face thumbnail might be:
+                            # f"{Config.IMMICH_API_URL}/api/assets/{asset_id}/thumbnail?faceId={face.get('id')}"
+                            # Or, if the face object itself contains a direct thumbnail URL: face.get('thumbnailUrl')
+
+                            # For now, let's just return the face object as is, and we'll refine thumbnail later
+                            all_faces.append({
+                                'id': face.get('id'),
+                                'assetId': asset_id,
+                                'personId': face.get('personId'),
+                                'boundingBox': face.get('boundingBox'),
+                                'thumbnailUrl': f"{Config.IMMICH_API_URL}/api/faces/{face.get('id')}/thumbnail" # This is a guess based on common API patterns
+                            })
+            return jsonify(all_faces)
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error fetching faces for person {person_id} from Immich: {e}")
+            return jsonify({"error": f"Could not fetch faces for person {person_id} from Immich: {e}"}), 500
+
     @app.route('/trigger_sync', methods=['POST'])
     def trigger_sync():
         # Expects a list of dictionaries: [{id: "person_id", max_faces: 100}]

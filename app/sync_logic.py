@@ -26,46 +26,51 @@ def run_sync(app, status_manager, selected_people_data=None):
             status_manager.add_log(f"INFO: Found {len(all_people)} people in Immich.")
 
             # Prepare people to process based on selection and global config
-            people_to_process = []
-            if selected_people_data is not None: # Manual sync with selection
-                selected_ids = {p['id'] for p in selected_people_data}
-                selected_limits = {p['id']: p.get('max_faces', Config.MAX_FACES_PER_PERSON) for p in selected_people_data}
-                
+            people_to_process_data = []
+            if selected_people_data is not None: # Manual sync with selection (curated faces)
+                # selected_people_data is now [{id: "person_id", faces: ["face_id_1", "face_id_2"]}]
+                people_to_process_data = selected_people_data
+                status_manager.add_log(f"INFO: Syncing {len(people_to_process_data)} selected people with curated faces.")
+            else: # Scheduled sync or manual sync without selection (sync all with MAX_FACES_PER_PERSON)
                 for p in all_people:
-                    if p['id'] in selected_ids:
-                        p['max_faces'] = selected_limits[p['id']]
-                        people_to_process.append(p)
-                status_manager.add_log(f"INFO: Syncing {len(people_to_process)} selected people.")
-            else: # Scheduled sync or manual sync without selection (sync all)
-                for p in all_people:
-                    p['max_faces'] = Config.MAX_FACES_PER_PERSON # Apply global limit
-                    people_to_process.append(p)
-                status_manager.add_log(f"INFO: Syncing all {len(people_to_process)} people.")
+                    # For non-curated syncs, we still fetch all faces and then limit
+                    people_to_process_data.append({'id': p['id'], 'name': p.get('name', 'Unknown'), 'faces': []}) # 'faces' will be populated later
+
+                status_manager.add_log(f"INFO: Syncing all {len(people_to_process_data)} people (non-curated).")
 
             trained_count = 0
             skipped_count = 0
             failed_count = 0
             total_faces_processed_overall = 0
 
-            for i, person in enumerate(people_to_process):
-                person_name = person.get('name', 'Unknown')
-                person_max_faces = person.get('max_faces', Config.MAX_FACES_PER_PERSON) # Get specific limit or global
+            for i, person_data in enumerate(people_to_process_data):
+                person_id = person_data['id']
+                person_name = next((p.get('name', 'Unknown') for p in all_people if p['id'] == person_id), 'Unknown')
+                curated_face_ids = person_data.get('faces') # This will be None for non-curated syncs
 
                 if not person_name:
-                    status_manager.add_log(f"WARN: Skipping person with no name (ID: {person['id']}).")
+                    status_manager.add_log(f"WARN: Skipping person with no name (ID: {person_id}).")
                     continue
 
                 status_manager.update_status(f"Fetching faces for {person_name}...")
                 
-                # --- 2. Fetch faces for the person ---
-                faces_url = f"{Config.IMMICH_API_URL}/api/people/{person['id']}/faces"
-                faces_response = requests.get(faces_url, headers=headers)
-                faces_response.raise_for_status()
-                faces = faces_response.json()
+                # --- 2. Fetch all faces for the person from Immich ---
+                # We need to fetch all faces to get their bounding box and assetId,
+                # then filter by curated_face_ids if provided.
+                all_person_faces_url = f"{Config.IMMICH_API_URL}/api/people/{person_id}/faces"
+                all_person_faces_response = requests.get(all_person_faces_url, headers=headers)
+                all_person_faces_response.raise_for_status()
+                all_person_faces = all_person_faces_response.json()
 
-                # Limit faces per person based on selected_people_data or global config
-                faces_to_process = faces[:person_max_faces]
-                status_manager.add_log(f"DEBUG: Processing {len(faces_to_process)} faces for {person_name} (max {person_max_faces}).")
+                faces_to_process = []
+                if curated_face_ids is not None and len(curated_face_ids) > 0:
+                    # Filter for only the curated faces
+                    faces_to_process = [face for face in all_person_faces if face['id'] in curated_face_ids]
+                    status_manager.add_log(f"DEBUG: Processing {len(faces_to_process)} curated faces for {person_name}.")
+                else:
+                    # Non-curated sync: apply MAX_FACES_PER_PERSON limit
+                    faces_to_process = all_person_faces[:Config.MAX_FACES_PER_PERSON]
+                    status_manager.add_log(f"DEBUG: Processing {len(faces_to_process)} faces for {person_name} (limited by MAX_FACES_PER_PERSON).")
 
                 person_faces_processed = 0
                 for face in faces_to_process:
@@ -82,15 +87,15 @@ def run_sync(app, status_manager, selected_people_data=None):
                     try:
                         # --- 3. Download, crop, and save to Frigate faces directory ---
                         status_manager.add_log(f"DEBUG: Processing face {face_id} for {person_name}.")
-                        asset_id = face['assetId']
-                        thumbnail_url = f"{Config.IMMICH_API_URL}/api/asset/{asset_id}/thumbnail"
+                        # The thumbnail URL for a specific face is directly from the /api/faces/{id}/thumbnail endpoint
+                        thumbnail_url = f"{Config.IMMICH_API_URL}/api/faces/{face_id}/thumbnail"
                         
                         # Download image
                         img_response = requests.get(thumbnail_url, headers=headers, stream=True)
                         img_response.raise_for_status()
                         image = Image.open(BytesIO(img_response.content))
 
-                        # Crop image
+                        # Crop image using bounding box from the face object
                         box = (face['boundingBox']['x1'], face['boundingBox']['y1'], face['boundingBox']['x2'], face['boundingBox']['y2'])
                         cropped_image = image.crop(box)
                         

@@ -72,6 +72,22 @@
         </section>
     </div>
 
+    <!-- Face Curation Modal -->
+    <div id="faceCurationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modalPersonName"></h2>
+            <div class="face-grid" id="personFacesGrid">
+                <!-- Faces will be loaded here -->
+            </div>
+            <div class="modal-actions">
+                <button id="selectAllFacesBtn" class="select-btn">Select All Faces</button>
+                <button id="deselectAllFacesBtn" class="select-btn">Deselect All Faces</button>
+                <button id="saveCuratedFacesBtn" class="sync-btn">Save Selection</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const themeToggle = document.getElementById('themeToggle');
@@ -84,6 +100,18 @@
             const peopleList = document.getElementById('peopleList');
             const selectAllBtn = document.getElementById('selectAllBtn');
             const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+            // Modal elements
+            const faceCurationModal = document.getElementById('faceCurationModal');
+            const closeModalButton = faceCurationModal.querySelector('.close-button');
+            const modalPersonName = document.getElementById('modalPersonName');
+            const personFacesGrid = document.getElementById('personFacesGrid');
+            const selectAllFacesBtn = document.getElementById('selectAllFacesBtn');
+            const deselectAllFacesBtn = document.getElementById('deselectAllFacesBtn');
+            const saveCuratedFacesBtn = document.getElementById('saveCuratedFacesBtn');
+
+            let currentPersonIdForModal = null;
+            let curatedFaces = {}; // Stores {personId: [faceId1, faceId2, ...]}
 
             // Theme Toggle Logic
             const currentTheme = localStorage.getItem('theme') || 'light';
@@ -131,15 +159,100 @@
                             div.innerHTML = `
                                 <input type="checkbox" id="person-${person.id}" value="${person.id}">
                                 <label for="person-${person.id}">${person.name}</label>
-                                <input type="number" class="max-faces-input" min="1" value="{{ config.MAX_FACES_PER_PERSON }}" data-person-id="${person.id}">
+                                <button class="curate-faces-btn" data-person-id="${person.id}" data-person-name="${person.name}">Curate Faces</button>
                             `;
                             peopleList.appendChild(div);
+                        });
+
+                        // Add event listeners for curate faces buttons
+                        peopleList.querySelectorAll('.curate-faces-btn').forEach(button => {
+                            button.addEventListener('click', (event) => {
+                                const personId = event.target.dataset.personId;
+                                const personName = event.target.dataset.personName;
+                                currentPersonIdForModal = personId;
+                                modalPersonName.textContent = `Curate Faces for ${personName}`;
+                                fetchAndDisplayFaces(personId);
+                                faceCurationModal.style.display = 'block';
+                            });
                         });
                     })
                     .catch(error => {
                         peopleList.innerHTML = `<p class="error-message">Network error fetching people: ${error}</p>`;
                     });
             };
+
+            // Function to fetch and display faces for a specific person
+            const fetchAndDisplayFaces = (personId) => {
+                personFacesGrid.innerHTML = '<p>Loading faces...</p>';
+                fetch(`/api/people/${personId}/faces`)
+                    .then(res => res.json())
+                    .then(faces => {
+                        personFacesGrid.innerHTML = ''; // Clear loading message
+                        if (faces.error) {
+                            personFacesGrid.innerHTML = `<p class="error-message">Error loading faces: ${faces.error}</p>`;
+                            return;
+                        }
+                        if (faces.length === 0) {
+                            personFacesGrid.innerHTML = '<p>No faces found for this person.</p>';
+                            return;
+                        }
+
+                        faces.forEach(face => {
+                            const faceDiv = document.createElement('div');
+                            faceDiv.className = 'face-item';
+                            // Check if this face was previously curated
+                            const isChecked = curatedFaces[personId] && curatedFaces[personId].includes(face.id) ? 'checked' : '';
+                            faceDiv.innerHTML = `
+                                <input type="checkbox" id="face-${face.id}" value="${face.id}" ${isChecked}>
+                                <label for="face-${face.id}">
+                                    <img src="${face.thumbnailUrl}" alt="Face" loading="lazy">
+                                </label>
+                            `;
+                            personFacesGrid.appendChild(faceDiv);
+                        });
+                    })
+                    .catch(error => {
+                        personFacesGrid.innerHTML = `<p class="error-message">Network error fetching faces: ${error}</p>`;
+                    });
+            };
+
+            // Modal close button
+            closeModalButton.addEventListener('click', () => {
+                faceCurationModal.style.display = 'none';
+            });
+
+            // Close modal if clicked outside
+            window.addEventListener('click', (event) => {
+                if (event.target === faceCurationModal) {
+                    faceCurationModal.style.display = 'none';
+                }
+            });
+
+            // Select All Faces in Modal
+            selectAllFacesBtn.addEventListener('click', () => {
+                personFacesGrid.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+            });
+
+            // Deselect All Faces in Modal
+            deselectAllFacesBtn.addEventListener('click', () => {
+                personFacesGrid.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            });
+
+            // Save Curated Faces
+            saveCuratedFacesBtn.addEventListener('click', () => {
+                const selectedFaceIds = [];
+                personFacesGrid.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                    selectedFaceIds.push(checkbox.value);
+                });
+                curatedFaces[currentPersonIdForModal] = selectedFaceIds;
+                faceCurationModal.style.display = 'none';
+                alert(`Saved ${selectedFaceIds.length} faces for ${modalPersonName.textContent.replace('Curate Faces for ', '')}`);
+            });
+
 
             // Initial fetch of people
             fetchPeople();
@@ -160,9 +273,9 @@
                 const selectedPeople = [];
                 peopleList.querySelectorAll('.person-item input[type="checkbox"]:checked').forEach(checkbox => {
                     const personId = checkbox.value;
-                    const maxFacesInput = peopleList.querySelector(`.max-faces-input[data-person-id="${personId}"]`);
-                    const maxFaces = maxFacesInput ? parseInt(maxFacesInput.value, 10) : {{ config.MAX_FACES_PER_PERSON }};
-                    selectedPeople.push({ id: personId, max_faces: maxFaces });
+                    // Use curated faces if available, otherwise default to all (or a max_faces limit if we re-introduce it)
+                    const facesToSync = curatedFaces[personId] || []; // If no curation, send empty array, backend will handle
+                    selectedPeople.push({ id: personId, faces: facesToSync });
                 });
                                             
                 if (selectedPeople.length === 0) {
