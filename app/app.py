@@ -8,6 +8,7 @@ import requests
 from .config import Config
 from .status_manager import status_manager
 from .sync_logic import run_sync
+from .mqtt_client import mqtt_client # Import the MQTT client
 
 # Configure logging for APScheduler
 logging.basicConfig(level=logging.INFO)
@@ -58,8 +59,9 @@ def create_app():
         scheduler.start()
         app.logger.info(f"Scheduled sync enabled: every {Config.SYNC_SCHEDULE_INTERVAL_HOURS} hours.")
 
-    # Shut down the scheduler when exiting the app
+    # Shut down the scheduler and MQTT client when exiting the app
     atexit.register(lambda: scheduler.shutdown())
+    atexit.register(lambda: mqtt_client.disconnect()) # Disconnect MQTT on exit
 
     @app.route('/')
     def index():

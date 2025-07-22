@@ -3,3 +3,4 @@ gunicorn
 requests
 Pillow
 APScheduler
+paho-mqtt

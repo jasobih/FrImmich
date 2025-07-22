@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 from .config import Config
 from .state_manager import StateManager
+from .mqtt_client import mqtt_client # Import the MQTT client
 
 # This function will be the main entry point for the background thread.
 def run_sync(app, status_manager, selected_person_ids=None):
@@ -14,6 +15,7 @@ def run_sync(app, status_manager, selected_person_ids=None):
         try:
             status_manager.add_log("INFO: Starting sync process...")
             status_manager.update_status("Sync in progress...")
+            mqtt_client.publish_status("sync_in_progress")
             
             # --- 1. Fetch people from Immich ---
             people_url = f"{Config.IMMICH_API_URL}/api/people"
@@ -63,6 +65,7 @@ def run_sync(app, status_manager, selected_person_ids=None):
                         person_faces_processed += 1
                         total_faces_processed_overall += 1
                         status_manager.update_progress(person_name, person_faces_processed, len(faces_to_process))
+                        mqtt_client.publish_sync_progress(status_manager.get_status())
                         continue
 
                     try:
@@ -106,6 +109,7 @@ def run_sync(app, status_manager, selected_person_ids=None):
                     person_faces_processed += 1
                     total_faces_processed_overall += 1
                     status_manager.update_progress(person_name, person_faces_processed, len(faces_to_process))
+                    mqtt_client.publish_sync_progress(status_manager.get_status())
 
             summary = {
                 "message": f"Sync complete! Trained: {trained_count}, Skipped: {skipped_count}, Failed: {failed_count}.",
@@ -115,14 +119,20 @@ def run_sync(app, status_manager, selected_person_ids=None):
                 "status": "Success" if failed_count == 0 else "Partial Failure"
             }
             status_manager.end_sync(summary)
+            mqtt_client.publish_sync_summary(summary)
+            mqtt_client.publish_status("idle")
 
         except requests.exceptions.RequestException as e:
             error_message = f"Sync Failed: Could not connect to Immich. Please check URL and API key. Details: {e}"
             status_manager.add_log(f"ERROR: {error_message}")
             summary = {"message": error_message, "status": "Failure"}
             status_manager.end_sync(summary)
+            mqtt_client.publish_sync_summary(summary)
+            mqtt_client.publish_status("error")
         except Exception as e:
             error_message = f"An unexpected error occurred: {e}"
             status_manager.add_log(f"CRITICAL: {error_message}")
             summary = {"message": error_message, "status": "Failure"}
             status_manager.end_sync(summary)
+            mqtt_client.publish_sync_summary(summary)
+            mqtt_client.publish_status("error")
