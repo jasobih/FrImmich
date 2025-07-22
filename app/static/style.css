@@ -432,6 +432,53 @@ button:hover:not(:disabled) {
     padding: 10px;
 }
 
+.suggest-faces-btn {
+    background-color: #28a745; /* A distinct color, e.g., green */
+    margin-right: 10px; /* Space from other buttons */
+}
+
+.suggest-faces-btn:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+.suggestion-status {
+    font-size: 0.9em;
+    color: var(--text-color);
+    margin-right: 10px;
+    font-style: italic;
+}
+
+.load-more-btn {
+    width: auto;
+    padding: 10px 20px;
+    font-size: 1em;
+    background-color: var(--select-btn-bg);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+}
+
+.load-more-btn:hover:not(:disabled) {
+    background-color: var(--select-btn-hover-bg);
+}
+
+.faces-count-display {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.loading-faces-message {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-color);
+    padding: 10px;
+}
+
 .people-actions {
     margin-top: 25px;
     display: flex;

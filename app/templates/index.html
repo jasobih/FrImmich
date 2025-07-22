@@ -81,6 +81,8 @@
                 <!-- Faces will be loaded here -->
             </div>
             <div class="modal-actions">
+                <span id="suggestionStatus" class="suggestion-status"></span>
+                <button id="suggestFacesBtn" class="select-btn">Suggest Best Faces</button>
                 <button id="selectAllFacesBtn" class="select-btn">Select All Faces</button>
                 <button id="deselectAllFacesBtn" class="select-btn">Deselect All Faces</button>
                 <button id="saveCuratedFacesBtn" class="sync-btn">Save Selection</button>
@@ -111,6 +113,8 @@
             const saveCuratedFacesBtn = document.getElementById('saveCuratedFacesBtn');
             const loadMoreFacesBtn = document.getElementById('loadMoreFacesBtn');
             const facesCountDisplay = document.getElementById('facesCountDisplay');
+            const suggestFacesBtn = document.getElementById('suggestFacesBtn');
+            const suggestionStatus = document.getElementById('suggestionStatus');
 
             let currentPersonIdForModal = null;
             let curatedFaces = {}; // Stores {personId: [faceId1, faceId2, ...]}
@@ -180,6 +184,7 @@
                                 personFacesGrid.innerHTML = ''; // Clear previous faces
                                 loadMoreFacesBtn.style.display = 'none'; // Hide load more initially
                                 facesCountDisplay.textContent = ''; // Clear count
+                                suggestionStatus.textContent = ''; // Clear suggestion status
                                 fetchAndDisplayFaces(personId, currentPage);
                                 faceCurationModal.style.display = 'block';
                             });
@@ -251,6 +256,38 @@
             loadMoreFacesBtn.addEventListener('click', () => {
                 currentPage++;
                 fetchAndDisplayFaces(currentPersonIdForModal, currentPage);
+            });
+
+            // Suggest Best Faces button event listener
+            suggestFacesBtn.addEventListener('click', () => {
+                suggestionStatus.textContent = 'Analyzing faces...';
+                suggestFacesBtn.disabled = true;
+                fetch(`/api/people/${currentPersonIdForModal}/suggest_faces`)
+                    .then(res => res.json())
+                    .then(data => {
+                        suggestionStatus.textContent = '';
+                        suggestFacesBtn.disabled = false;
+                        if (data.error) {
+                            suggestionStatus.textContent = `Error: ${data.error}`;
+                            return;
+                        }
+                        // Deselect all first
+                        personFacesGrid.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                            checkbox.checked = false;
+                        });
+                        // Select suggested faces
+                        data.suggested_face_ids.forEach(faceId => {
+                            const checkbox = document.getElementById(`face-${faceId}`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        });
+                        suggestionStatus.textContent = `Selected ${data.suggested_face_ids.length} best faces.`
+                    })
+                    .catch(error => {
+                        suggestionStatus.textContent = `Network error: ${error}`;
+                        suggestFacesBtn.disabled = false;
+                    });
             });
 
             // Modal close button

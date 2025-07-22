@@ -9,6 +9,7 @@ from .config import Config
 from .status_manager import status_manager
 from .sync_logic import run_sync
 from .mqtt_client import mqtt_client # Import the MQTT client
+from . import face_analyzer # Import the new face_analyzer module
 
 # Configure logging for APScheduler
 logging.basicConfig(level=logging.INFO)
@@ -82,13 +83,11 @@ def create_app():
     @app.route('/api/people/<person_id>/faces')
     def get_person_faces(person_id):
         try:
+            # Allow fetching all faces for analysis, or paginated for display
+            fetch_all = request.args.get('all', 'false').lower() == 'true'
             page = request.args.get('page', 1, type=int)
             page_size = request.args.get('pageSize', 20, type=int) # Default to 20 faces per page
 
-            # Step 1: Get assets for the person
-            # Immich API does not directly support pagination for faces within a person object.
-            # We need to fetch all assets for the person, then all faces from those assets,
-            # and then apply pagination on our side.
             assets_url = f"{Config.IMMICH_API_URL}/api/assets?personId={person_id}"
             headers = {"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"}
             assets_response = requests.get(assets_url, headers=headers)
@@ -101,7 +100,6 @@ def create_app():
                 if not asset_id:
                     continue
 
-                # Step 2: Get details for each asset to extract faces
                 asset_detail_url = f"{Config.IMMICH_API_URL}/api/assets/{asset_id}"
                 asset_detail_response = requests.get(asset_detail_url, headers=headers)
                 asset_detail_response.raise_for_status()
@@ -109,16 +107,18 @@ def create_app():
 
                 if 'faces' in asset_detail:
                     for face in asset_detail['faces']:
-                        # Ensure the face belongs to the requested person
                         if face.get('personId') == person_id:
                             all_faces.append({
                                 'id': face.get('id'),
-                                'assetId': asset_id,
+                                'assetId': face.get('assetId'), # Ensure assetId is present in face object
                                 'personId': face.get('personId'),
                                 'boundingBox': face.get('boundingBox'),
                                 'thumbnailUrl': f"{Config.IMMICH_API_URL}/api/faces/{face.get('id')}/thumbnail"
                             })
             
+            if fetch_all:
+                return jsonify(all_faces)
+
             total_faces = len(all_faces)
             start_index = (page - 1) * page_size
             end_index = start_index + page_size
@@ -133,6 +133,36 @@ def create_app():
         except requests.exceptions.RequestException as e:
             app.logger.error(f"Error fetching faces for person {person_id} from Immich: {e}")
             return jsonify({"error": f"Could not fetch faces for person {person_id} from Immich: {e}"}), 500
+
+    @app.route('/api/people/<person_id>/suggest_faces')
+    def suggest_faces(person_id):
+        app.logger.info(f"Attempting to suggest faces for person {person_id}")
+        try:
+            # Fetch all faces for the person (up to a limit for analysis)
+            # We'll use a higher page_size or a dedicated internal call to get more faces for analysis
+            # For now, let's assume we fetch all and face_analyzer will handle the limit
+            # In a real scenario, we might want to fetch only the first N faces from Immich
+            # to avoid excessive resource usage if a person has thousands of faces.
+            # For this iteration, we'll fetch all and let the analyzer limit.
+            faces_response = requests.get(f"{Config.IMMICH_API_URL}/api/people/{person_id}/faces?all=true", headers={"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"})
+            faces_response.raise_for_status()
+            all_person_faces = faces_response.json()
+
+            if not all_person_faces:
+                return jsonify({"message": "No faces found for analysis.", "suggested_face_ids": []}), 200
+
+            # Call the face_analyzer to get suggested faces
+            # This will be a blocking call, consider threading for very long analysis
+            suggested_face_ids = face_analyzer.analyze_and_suggest_faces(all_person_faces, app.logger)
+            
+            return jsonify({"suggested_face_ids": suggested_face_ids}), 200
+
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error fetching faces from Immich for analysis: {e}")
+            return jsonify({"error": f"Could not fetch faces from Immich for analysis: {e}"}), 500
+        except Exception as e:
+            app.logger.error(f"Error during face analysis for person {person_id}: {e}")
+            return jsonify({"error": f"Error during face analysis: {e}"}), 500
 
     @app.route('/trigger_sync', methods=['POST'])
     def trigger_sync():
