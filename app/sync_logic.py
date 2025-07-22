@@ -122,6 +122,19 @@ def run_sync(app, status_manager, selected_person_ids=None):
             mqtt_client.publish_sync_summary(summary)
             mqtt_client.publish_status("idle")
 
+            # --- Trigger Frigate Restart if configured ---
+            if Config.FRIGATE_API_URL:
+                status_manager.add_log("INFO: Triggering Frigate restart to load new faces...")
+                try:
+                    frigate_restart_url = f"{Config.FRIGATE_API_URL}/api/restart"
+                    restart_response = requests.post(frigate_restart_url)
+                    restart_response.raise_for_status()
+                    status_manager.add_log("INFO: Frigate restart command sent successfully.")
+                except requests.exceptions.RequestException as re:
+                    status_manager.add_log(f"ERROR: Failed to trigger Frigate restart: {re}")
+                except Exception as e:
+                    status_manager.add_log(f"ERROR: An unexpected error occurred during Frigate restart: {e}")
+
         except requests.exceptions.RequestException as e:
             error_message = f"Sync Failed: Could not connect to Immich. Please check URL and API key. Details: {e}"
             status_manager.add_log(f"ERROR: {error_message}")
