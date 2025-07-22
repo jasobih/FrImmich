@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   frimmich:
-    build: .
+    image: ghcr.io/jasobih/frimmich:latest # Use pre-built image from GHCR
     container_name: frimmich
     ports:
       - "8080:8080"
@@ -33,5 +33,5 @@ services:
       - ./data:/app/data
       # Mount your Frigate clips/faces directory here
       # IMPORTANT: Replace the host path with your actual Frigate faces directory
-      - /path/to/your/frigate/media/clips/faces:/app/frigate_faces
+      - /mnt/frigate/clips/faces:/app/frigate_faces
     restart: unless-stopped

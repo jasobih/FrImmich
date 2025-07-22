@@ -102,7 +102,7 @@ Before running the container, you need to gather the following information:
 
     services:
       frimmich:
-        build: .
+        image: ghcr.io/jasobih/frimmich:latest # Use pre-built image from GHCR
         container_name: frimmich
         ports:
           - "8080:8080"
@@ -154,9 +154,9 @@ Before running the container, you need to gather the following information:
     mkdir -p /path/to/your/appdata/frimmich
     ```
 
-2.  **Build the Docker image** (from the `frimmich` project root):
+2.  **Pull the Docker image:**
     ```bash
-    docker build -t frimmich:latest .
+    docker pull ghcr.io/jasobih/frimmich:latest
     ```
 
 3.  **Run the Docker container:** Use the following command, replacing the placeholder values with your own.
@@ -172,7 +172,7 @@ Before running the container, you need to gather the following information:
       -v /path/to/your/appdata/frimmich:/app/data \
       -v /path/to/your/frigate/media/clips/faces:/app/frigate_faces \
       --restart unless-stopped \
-      frimmich:latest
+      ghcr.io/jasobih/frimmich:latest
     ```
 
     **Important Volume Mount:** The line `-v /path/to/your/frigate/media/clips/faces:/app/frigate_faces` is crucial. Replace `/path/to/your/frigate/media/clips/faces` with the actual absolute path to your Frigate `clips/faces` directory on your Docker host.
