@@ -7,7 +7,7 @@ from .config import Config
 from .state_manager import StateManager
 
 # This function will be the main entry point for the background thread.
-def run_sync(app, status_manager):
+def run_sync(app, status_manager, selected_person_ids=None):
     with app.app_context(): # Needed to access app.logger
         state_manager = StateManager(Config.STATE_FILE)
         
@@ -20,8 +20,16 @@ def run_sync(app, status_manager):
             headers = {"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"}
             response = requests.get(people_url, headers=headers)
             response.raise_for_status()
-            people = response.json()
-            status_manager.add_log(f"INFO: Found {len(people)} people in Immich.")
+            all_people = response.json()
+            status_manager.add_log(f"INFO: Found {len(all_people)} people in Immich.")
+
+            # Filter people if specific IDs are selected
+            if selected_person_ids is not None:
+                people = [p for p in all_people if p['id'] in selected_person_ids]
+                status_manager.add_log(f"INFO: Syncing {len(people)} selected people.")
+            else:
+                people = all_people
+                status_manager.add_log(f"INFO: Syncing all {len(people)} people.")
 
             trained_count = 0
             skipped_count = 0

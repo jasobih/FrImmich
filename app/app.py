@@ -3,6 +3,7 @@ import threading
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import logging
+import requests
 
 from .config import Config
 from .status_manager import status_manager
@@ -16,10 +17,12 @@ def create_app():
     
     # Configure app logging
     app.logger.setLevel(Config.LOG_LEVEL)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    app.logger.addHandler(handler)
+    handler = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    # Ensure only one handler is added to avoid duplicate logs
+    if not app.logger.handlers:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(handler)
+        app.logger.addHandler(stream_handler)
 
     # It's better to validate config when the app starts
     try:
@@ -35,8 +38,9 @@ def create_app():
     # Function to be scheduled
     def scheduled_sync_job():
         app.logger.info("Attempting scheduled sync...")
+        # For scheduled syncs, we process all people (no specific person_ids)
         if status_manager.start_sync():
-            sync_thread = threading.Thread(target=run_sync, args=(app, status_manager,))
+            sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, None,))
             sync_thread.start()
         else:
             app.logger.info("Scheduled sync skipped: A sync is already in progress.")
@@ -61,13 +65,27 @@ def create_app():
     def index():
         return render_template('index.html', config=Config)
 
+    @app.route('/api/people')
+    def get_people():
+        try:
+            people_url = f"{Config.IMMICH_API_URL}/api/people"
+            headers = {"x-api-key": Config.IMMICH_API_KEY, "Accept": "application/json"}
+            response = requests.get(people_url, headers=headers)
+            response.raise_for_status()
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error fetching people from Immich: {e}")
+            return jsonify({"error": f"Could not fetch people from Immich: {e}"}), 500
+
     @app.route('/trigger_sync', methods=['POST'])
     def trigger_sync():
+        person_ids = request.json.get('person_ids', None) # Get selected person_ids
+
         if not status_manager.start_sync():
             return jsonify({"error": "Sync already in progress."}), 409
 
-        # Run the sync logic in a background thread
-        sync_thread = threading.Thread(target=run_sync, args=(app, status_manager,))
+        # Run the sync logic in a background thread, passing selected person_ids
+        sync_thread = threading.Thread(target=run_sync, args=(app, status_manager, person_ids,))
         sync_thread.start()
         
         return jsonify({"message": "Sync started."}), 202

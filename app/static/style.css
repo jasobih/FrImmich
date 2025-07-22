@@ -138,3 +138,57 @@ button:hover:not(:disabled) {
     font-size: 0.95em;
     color: #555;
 }
+
+.people-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px; /* For scrollbar */
+}
+
+.person-item {
+    display: flex;
+    align-items: center;
+    background-color: #f0f4f8;
+    border: 1px solid #dce4ec;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.person-item:hover {
+    background-color: #e6edf5;
+}
+
+.person-item input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.2);
+}
+
+.person-item label {
+    flex-grow: 1;
+    cursor: pointer;
+    font-weight: 500;
+    color: #34495e;
+}
+
+.select-btn {
+    width: auto; /* Override full width for these buttons */
+    margin-top: 15px;
+    margin-right: 10px;
+    padding: 8px 15px;
+    font-size: 0.9em;
+    background-color: #6c757d; /* Gray for select/deselect */
+}
+
+.select-btn:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-weight: bold;
+}

@@ -26,6 +26,15 @@
             </p>
         </section>
 
+        <section class="people-selection card">
+            <h2>Select People to Sync</h2>
+            <div id="peopleList" class="people-list">
+                <p>Loading people from Immich...</p>
+            </div>
+            <button id="selectAllBtn" class="select-btn">Select All</button>
+            <button id="deselectAllBtn" class="select-btn">Deselect All</button>
+        </section>
+
         <section class="actions">
             <button id="syncBtn">Sync Now</button>
         </section>
@@ -58,11 +67,71 @@
             const logArea = document.getElementById('logArea').firstElementChild;
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
+            const peopleList = document.getElementById('peopleList');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+            let allPeople = []; // To store the fetched people data
+
+            // Function to fetch and display people
+            const fetchPeople = () => {
+                fetch('/api/people')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) {
+                            peopleList.innerHTML = `<p class="error-message">Error loading people: ${data.error}</p>`;
+                            return;
+                        }
+                        allPeople = data.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+                        peopleList.innerHTML = ''; // Clear loading message
+                        allPeople.forEach(person => {
+                            const div = document.createElement('div');
+                            div.className = 'person-item';
+                            div.innerHTML = `
+                                <input type="checkbox" id="person-${person.id}" value="${person.id}">
+                                <label for="person-${person.id}">${person.name}</label>
+                            `;
+                            peopleList.appendChild(div);
+                        });
+                    })
+                    .catch(error => {
+                        peopleList.innerHTML = `<p class="error-message">Network error fetching people: ${error}</p>`;
+                    });
+            };
+
+            // Initial fetch of people
+            fetchPeople();
+
+            selectAllBtn.addEventListener('click', () => {
+                peopleList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+            });
+
+            deselectAllBtn.addEventListener('click', () => {
+                peopleList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            });
 
             syncBtn.addEventListener('click', () => {
+                const selectedPersonIds = Array.from(peopleList.querySelectorAll('input[type="checkbox"]:checked'))
+                                            .map(checkbox => checkbox.value);
+                
+                if (selectedPersonIds.length === 0) {
+                    alert('Please select at least one person to sync.');
+                    return;
+                }
+
                 syncBtn.disabled = true;
                 syncBtn.textContent = 'Starting...';
-                fetch('/trigger_sync', { method: 'POST' });
+                fetch('/trigger_sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ person_ids: selectedPersonIds })
+                });
             });
 
             setInterval(() => {
