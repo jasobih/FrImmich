@@ -13,29 +13,40 @@
             <p class="version">Version: 0.1.0</p>
         </header>
 
-        <section class="config-display">
+        <section class="config-display card">
             <h2>Configuration</h2>
             <p><b>Immich URL:</b> <code>{{ config.IMMICH_API_URL }}</code></p>
-            <p><b>Double Take URL:</b> <code>{{ config.DOUBLETAKE_API_URL }}</code></p>
+            <p><b>Frigate Faces Directory:</b> <code>{{ config.FRIGATE_FACES_DIR }}</code></p>
+            <p><b>Scheduled Sync:</b> 
+                {% if config.SYNC_SCHEDULE_INTERVAL_HOURS > 0 %}
+                    Every {{ config.SYNC_SCHEDULE_INTERVAL_HOURS }} hours
+                {% else %}
+                    Disabled
+                {% endif %}
+            </p>
         </section>
 
         <section class="actions">
             <button id="syncBtn">Sync Now</button>
         </section>
 
-        <section class="status">
+        <section class="status card">
             <h2>Live Status</h2>
-            <div id="statusArea" class="status-box">Idle.</div>
+            <div id="statusArea" class="status-message">Idle.</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p id="progressText" class="progress-text"></p>
         </section>
 
-        <section class="summary">
+        <section class="summary card">
             <h2>Last Sync Summary</h2>
-            <pre id="summaryArea" class="summary-box"><code>Never.</code></pre>
+            <pre id="summaryArea" class="summary-content"><code>Never.</code></pre>
         </section>
 
-        <section class="logs">
+        <section class="logs card">
             <h2>Logs</h2>
-            <pre id="logArea" class="log-box"><code></code></pre>
+            <pre id="logArea" class="log-content"><code></code></pre>
         </section>
     </div>
 
@@ -45,6 +56,8 @@
             const statusArea = document.getElementById('statusArea');
             const summaryArea = document.getElementById('summaryArea').firstElementChild;
             const logArea = document.getElementById('logArea').firstElementChild;
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
 
             syncBtn.addEventListener('click', () => {
                 syncBtn.disabled = true;
@@ -69,6 +82,22 @@
                         logArea.textContent = data.logs.join('\n');
                         // Auto-scroll logs to the bottom
                         logArea.parentElement.scrollTop = logArea.parentElement.scrollHeight;
+
+                        // Update progress bar
+                        if (data.in_progress && data.total_faces_to_process > 0) {
+                            const percent = (data.processed_faces_count / data.total_faces_to_process) * 100;
+                            progressBar.style.width = `${percent}%`;
+                            progressText.textContent = `Processing ${data.current_person}: ${data.processed_faces_count} of ${data.total_faces_to_process} faces (${percent.toFixed(1)}%)`;
+                            progressBar.style.backgroundColor = '#2ecc71'; // Green when in progress
+                        } else if (data.in_progress) {
+                            progressBar.style.width = '100%';
+                            progressBar.style.backgroundColor = '#f39c12'; // Orange for indeterminate
+                            progressText.textContent = 'Initializing sync...';
+                        } else {
+                            progressBar.style.width = '0%';
+                            progressBar.style.backgroundColor = '#ccc'; // Gray when idle
+                            progressText.textContent = '';
+                        }
                     });
             }, 2000); // Poll every 2 seconds
         });

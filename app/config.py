@@ -3,16 +3,17 @@ import os
 class Config:
     IMMICH_API_URL = os.getenv("IMMICH_API_URL")
     IMMICH_API_KEY = os.getenv("IMMICH_API_KEY")
-    DOUBLETAKE_API_URL = os.getenv("DOUBLETAKE_API_URL")
-    DOUBLETAKE_API_KEY = os.getenv("DOUBLETAKE_API_KEY")
+    FRIGATE_FACES_DIR = os.getenv("FRIGATE_FACES_DIR", "/app/frigate_faces")
     SKIP_EXISTING_FACES = os.getenv("SKIP_EXISTING_FACES", "true").lower() == "true"
-    UI_PORT = int(os.getenv("UI_PORT", "80"))
+    UI_PORT = int(os.getenv("UI_PORT", "8080"))
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
     DATA_DIR = "/app/data"
     STATE_FILE = os.path.join(DATA_DIR, "synced_faces_state.json")
     TEMP_DIR = "/tmp/faces"
+    MAX_FACES_PER_PERSON = int(os.getenv("MAX_FACES_PER_PERSON", "100")) # Default to 100
+    SYNC_SCHEDULE_INTERVAL_HOURS = int(os.getenv("SYNC_SCHEDULE_INTERVAL_HOURS", "0")) # 0 means no scheduled sync
 
     @staticmethod
     def validate():
-        if not Config.IMMICH_API_URL or not Config.IMMICH_API_KEY or not Config.DOUBLETAKE_API_URL:
-            raise ValueError("Missing required environment variables: IMMICH_API_URL, IMMICH_API_KEY, DOUBLETAKE_API_URL")
+        if not Config.IMMICH_API_URL or not Config.IMMICH_API_KEY or not Config.FRIGATE_FACES_DIR:
+            raise ValueError("Missing required environment variables: IMMICH_API_URL, IMMICH_API_KEY, FRIGATE_FACES_DIR")
