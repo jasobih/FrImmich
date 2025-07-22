@@ -18,3 +18,8 @@
 
 ### Fixed
 - N/A
+
+## 0.1.4 - 2025-07-23
+
+### Fixed
+- Dockerfile: Added `cmake` and `build-essential` packages to ensure successful compilation of `dlib` and `face_recognition` during Docker image build.
