@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # Install system dependencies required for Pillow
-RUN apt-get update && apt-get install -y --no-install-recommends     libjpeg-dev     zlib1g-dev     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends     libjpeg-dev     zlib1g-dev     cmake     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file and install Python dependencies
 COPY requirements.txt .
