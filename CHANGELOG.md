@@ -1,10 +1,12 @@
 # Changelog
 
-## 0.1.1 - 2025-07-23
+## 0.1.3 - 2025-07-23
 
 ### Added
+- **Smart Face Trainer (Opt-in):** Introduced an opt-in feature within the face curation UI to automatically suggest the "best" 5-10 diverse faces for a person from their Immich library. This leverages computer vision to analyze clarity, frontal angle, lighting, and dissimilarity, aiming to provide optimal training images for Frigate while managing resource usage by analyzing a limited subset of photos.
 - **Face Curation UI:** Implemented a new web UI feature allowing users to manually select specific faces from Immich to sync to Frigate. This provides fine-grained control over the training data, addressing recommendations for diverse and limited training sets.
 - New API endpoint `/api/people/<person_id>/faces` to fetch all detected faces for a given person from Immich.
+- New API endpoint `/api/people/<person_id>/suggest_faces` to trigger the smart face analysis.
 
 ### Changed
 - **Face Curation UI:** Implemented pagination and a "Load More" button for the face curation modal, improving usability and performance when a person has a large number of faces.

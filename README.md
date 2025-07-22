@@ -66,10 +66,28 @@ For optimal performance of Frigate's native face recognition, the *diversity* of
 
 By focusing on the diversity of your training images, you can significantly enhance the accuracy and robustness of Frigate's face recognition.
 
+### Smart Face Trainer (Opt-in Feature)
+
+To further assist in selecting optimal training images, Frimmich now includes an **opt-in Smart Face Trainer**. This feature leverages computer vision to analyze a subset of a person's faces from Immich and suggest the "best" ones for Frigate's training.
+
+**How it works:**
+1.  When you click "Curate Faces" for a person, you'll see a new "Suggest Best Faces" button.
+2.  Clicking this button will trigger an analysis of the first 50 faces (by default) for that person from Immich.
+3.  The analysis considers factors like **clarity**, **frontal angle**, **lighting**, and **dissimilarity** to already selected faces.
+4.  Frimmich will then automatically select the top 5-10 (configurable) most optimal and diverse faces in the curation modal.
+
+**Benefits:**
+*   **Automated Curation:** Reduces the manual effort of sifting through hundreds of photos.
+*   **Optimized Training:** Helps you select images that are most likely to improve Frigate's recognition accuracy.
+*   **Resource Management:** The analysis is performed on a limited subset of photos (first 50), making it a resource-conscious opt-in feature.
+
+**To use:** Simply open the "Curate Faces" modal for a person and click "Suggest Best Faces". Review the suggestions and adjust as needed before saving your selection.
 
 
 ## Features
 
+- **Smart Face Trainer (Opt-in):** Automatically suggests optimal and diverse faces for Frigate training using computer vision.
+- **Face Curation UI:** A dedicated web interface to manually select and manage which faces are synced to Frigate, with pagination for large collections.
 - **Simple Web UI:** A clean interface to trigger and monitor the sync process.
 - **One-Click Sync:** A "Sync Now" button to start the process manually.
 - **Real-Time Status:** View live updates on the sync progress and see detailed logs.
