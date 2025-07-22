@@ -46,22 +46,27 @@ In essence, `Frimmich` ensures Frigate *knows who people are* based on your Immi
 
 ## Optimizing Face Recognition Accuracy
 
-While Frimmich efficiently transfers named faces from Immich to Frigate, it's important to understand how Frigate's face recognition works best. The Frigate developers recommend training with a limited number of high-quality, *diverse* images (typically 2-5 per person).
+For optimal performance of Frigate's native face recognition, the *diversity* of the training images is more critical than the sheer *quantity*. Frigate's models are pre-trained to recognize faces, and the images you provide in the `known_faces` directory serve as "anchor" examples for specific identities.
 
-**Why this is important:**
+**Key Considerations for Training Images:**
 
-*   **Real-world vs. Ideal Images:** Immich often contains high-resolution, front-facing photos taken in ideal conditions. Frigate, however, processes images from security cameras, which are often lower resolution, taken at various angles, in different lighting, and sometimes partially obscured.
-*   **Avoiding Over-training:** Using too many "perfect" images can lead to a model that is over-optimized for ideal conditions and performs poorly on the varied, less-than-perfect images from your cameras, resulting in false positives or negatives.
+*   **Diversity is Key:** Aim for images that represent the various ways a person might appear in your camera feeds. This includes:
+    *   **Different Angles:** Front, side, and three-quarter views.
+    *   **Varying Lighting:** Images taken in different lighting conditions (e.g., bright daylight, shadows, low light).
+    *   **Different Expressions:** Neutral, smiling, etc.
+    *   **Real-world Conditions:** Images that resemble the quality and conditions of your camera feeds (e.g., not just perfect studio shots).
+*   **Avoid Redundancy:** Providing many images that are very similar (e.g., all front-facing, well-lit) can lead to overfitting, where the model performs well on ideal images but struggles with the variations found in real camera footage.
+*   **Quantity vs. Quality (of Diversity):** While a small number of highly diverse images (e.g., 2-5) can be very effective, a larger set of images (e.g., 20 or more) can also be beneficial *if* those images are genuinely diverse and cover a wide range of appearances. The goal is to provide the model with a comprehensive understanding of the person's appearance under various conditions.
 
-**Recommendations for Frimmich Users:**
+**Leveraging Frimmich for Optimization:**
 
-To achieve the best recognition accuracy in Frigate, consider the following:
+*   **Curate Immich Faces:** Manually select images in Immich that offer the best diversity for each person.
+*   **Control Sync Quantity:** Utilize the `MAX_FACES_PER_PERSON` environment variable in your `docker-compose.yml` or Docker run command to control the maximum number of faces Frimmich syncs for each person. This allows you to experiment with different quantities while prioritizing diversity.
+*   **Monitor and Adjust:** After syncing, observe Frigate's recognition performance. If you encounter false positives or negatives, consider refining the selection of images in Immich or adjusting the `MAX_FACES_PER_PERSON` setting.
 
-1.  **Curate Immich Faces:** If possible, manually select 2-5 images per person in Immich that represent a good variety of angles, lighting conditions, and expressions. These should ideally resemble the kind of images your Frigate cameras capture.
-2.  **Limit `MAX_FACES_PER_PERSON`:** In your `docker-compose.yml` or Docker run command, set the `MAX_FACES_PER_PERSON` environment variable to a small number (e.g., `5`). This will ensure Frimmich only syncs a limited, more manageable set of faces.
-3.  **Monitor Frigate's Performance:** After syncing, observe Frigate's recognition performance. If you notice frequent false positives or negatives, consider adjusting the images used for training.
+By focusing on the diversity of your training images, you can significantly enhance the accuracy and robustness of Frigate's face recognition.
 
-By being mindful of the quality and diversity of the training images, you can significantly improve Frigate's face recognition accuracy.
+
 
 ## Features
 
