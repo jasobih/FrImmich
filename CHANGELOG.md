@@ -7,6 +7,7 @@
 - New API endpoint `/api/people/<person_id>/faces` to fetch all detected faces for a given person from Immich.
 
 ### Changed
+- **Face Curation UI:** Implemented pagination and a "Load More" button for the face curation modal, improving usability and performance when a person has a large number of faces.
 - **Sync Logic:** Updated `sync_logic.py` to utilize the curated face selections. The `MAX_FACES_PER_PERSON` environment variable now acts as a default for non-curated syncs, but is overridden by user selections.
 - **README.md:** Revised the "Optimizing Face Recognition Accuracy" section to emphasize the importance of diversity in training images over strict quantity, and to guide users on leveraging the new curation feature.
 
