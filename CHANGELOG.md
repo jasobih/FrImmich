@@ -23,3 +23,8 @@
 
 ### Fixed
 - Dockerfile: Added `cmake` and `build-essential` packages to ensure successful compilation of `dlib` and `face_recognition` during Docker image build.
+
+## 0.1.5 - 2025-07-23
+
+### Fixed
+- Dockerfile: Added `libboost-python-dev`, `libboost-thread-dev`, `libx11-dev`, and `libatlas-base-dev` to further support `dlib` compilation.
