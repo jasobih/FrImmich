@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immich-Frigate Face Sync</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Immich-Frigate Face Sync</h1>
+            <p class="version">Version: 0.1.0</p>
+        </header>
+
+        <section class="config-display">
+            <h2>Configuration</h2>
+            <p><b>Immich URL:</b> <code>{{ config.IMMICH_API_URL }}</code></p>
+            <p><b>Double Take URL:</b> <code>{{ config.DOUBLETAKE_API_URL }}</code></p>
+        </section>
+
+        <section class="actions">
+            <button id="syncBtn">Sync Now</button>
+        </section>
+
+        <section class="status">
+            <h2>Live Status</h2>
+            <div id="statusArea" class="status-box">Idle.</div>
+        </section>
+
+        <section class="summary">
+            <h2>Last Sync Summary</h2>
+            <pre id="summaryArea" class="summary-box"><code>Never.</code></pre>
+        </section>
+
+        <section class="logs">
+            <h2>Logs</h2>
+            <pre id="logArea" class="log-box"><code></code></pre>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const syncBtn = document.getElementById('syncBtn');
+            const statusArea = document.getElementById('statusArea');
+            const summaryArea = document.getElementById('summaryArea').firstElementChild;
+            const logArea = document.getElementById('logArea').firstElementChild;
+
+            syncBtn.addEventListener('click', () => {
+                syncBtn.disabled = true;
+                syncBtn.textContent = 'Starting...';
+                fetch('/trigger_sync', { method: 'POST' });
+            });
+
+            setInterval(() => {
+                fetch('/status')
+                    .then(res => res.json())
+                    .then(data => {
+                        syncBtn.disabled = data.in_progress;
+                        syncBtn.textContent = data.in_progress ? 'Sync in Progress...' : 'Sync Now';
+                        statusArea.textContent = data.status_message;
+                        
+                        if (Object.keys(data.last_sync_summary).length > 0) {
+                            summaryArea.textContent = JSON.stringify(data.last_sync_summary, null, 2);
+                        } else {
+                            summaryArea.textContent = 'Never.';
+                        }
+
+                        logArea.textContent = data.logs.join('\n');
+                        // Auto-scroll logs to the bottom
+                        logArea.parentElement.scrollTop = logArea.parentElement.scrollHeight;
+                    });
+            }, 2000); // Poll every 2 seconds
+        });
+    </script>
+</body>
+</html>
