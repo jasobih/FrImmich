@@ -18,8 +18,9 @@ The application orchestrates a simple data flow:
 2.  **Fetch Faces:** For each person, it downloads the cropped thumbnail images of their faces from Immich.
 3.  **Save to Frigate Faces Directory:** It saves these cropped face images directly into the designated `known_faces` directory within your Frigate configuration (e.g., `/media/frigate/clips/faces/<person_name>/`). Frigate automatically monitors this directory and uses these images to train its native face recognition models.
 4.  **Frigate Recognizes:** Once the images are in place, Frigate uses them to recognize and announce the names of people it detects in your camera feeds.
+5.  **Optional Frigate Restart:** After a successful sync, Frimmich can optionally trigger a restart of your Frigate instance via its API, ensuring new faces are loaded immediately.
 
-**Frimmich talks directly to Immich and Frigate's file system.**
+**Frimmich talks directly to Immich and Frigate's file system/API.**
 
 ## Compatibility & Design Philosophy
 
@@ -80,15 +81,84 @@ Before running the container, you need to gather the following information:
 | `SKIP_EXISTING_FACES`   | (Optional) `true` or `false`. If `true`, skips faces already synced.        | `true`                                   |
 | `UI_PORT`               | (Optional) The internal port for the Flask web server.                      | `8080`                                   |
 | `LOG_LEVEL`             | (Optional) Controls log verbosity.                                          | `INFO`                                   |
+| `MQTT_HOST`             | (Optional) MQTT Broker Hostname or IP.                                      | `mqtt.local`                             |
+| `MQTT_PORT`             | (Optional) MQTT Broker Port.                                                | `1883`                                   |
+| `MQTT_USERNAME`         | (Optional) MQTT Username (if authentication is required).                   | `frimmich_user`                          |
+| `MQTT_PASSWORD`         | (Optional) MQTT Password.                                                   | `your_mqtt_password`                     |
+| `MQTT_TOPIC_PREFIX`     | (Optional) MQTT Topic Prefix for Frimmich messages.                         | `frimmich`                               |
+| `FRIGATE_API_URL`       | (Optional) Base URL of your Frigate API (e.g., `http://frigate.local:5000`). Used to trigger restart after sync. | `http://frigate.local:5000`              |
+| `SYNC_SCHEDULE_INTERVAL_HOURS` | (Optional) Interval in hours for automatic sync. Set to `0` to disable.    | `24`                                     |
+| `MAX_FACES_PER_PERSON`  | (Optional) Maximum number of faces to sync per person.                      | `100`                                    |
 
 ## How to Run
+
+### Using Docker Compose (Recommended)
+
+1.  **Create a `docker-compose.yml` file** in your project directory (e.g., `frimmich/docker-compose.yml`):
+
+    ```yaml
+    version: '3.8'
+
+    services:
+      frimmich:
+        build: .
+        container_name: frimmich
+        ports:
+          - "8080:8080"
+        environment:
+          # Required Immich Configuration
+          - IMMICH_API_URL=http://<your_immich_ip>:2283
+          - IMMICH_API_KEY=<your_immich_api_key>
+          # Required Frigate Configuration
+          - FRIGATE_FACES_DIR=/app/frigate_faces
+          # Optional: Scheduled Sync (set to 0 to disable)
+          - SYNC_SCHEDULE_INTERVAL_HOURS=0
+          # Optional: MQTT Configuration (uncomment and configure to enable)
+          # - MQTT_HOST=<your_mqtt_broker_ip>
+          # - MQTT_PORT=1883
+          # - MQTT_USERNAME=<your_mqtt_username>
+          # - MQTT_PASSWORD=<your_mqtt_password>
+          # - MQTT_TOPIC_PREFIX=frimmich
+          # Optional: Frigate API for restart (uncomment and configure to enable)
+          # - FRIGATE_API_URL=http://<your_frigate_ip>:5000
+          # Optional: Logging Level (DEBUG, INFO, WARNING, ERROR)
+          - LOG_LEVEL=INFO
+          # Optional: Max faces per person to sync
+          - MAX_FACES_PER_PERSON=100
+          # Optional: Skip already existing faces
+          - SKIP_EXISTING_FACES=true
+        volumes:
+          # Persistent storage for synced faces state
+          - ./data:/app/data
+          # Mount your Frigate clips/faces directory here
+          # IMPORTANT: Replace the host path with your actual Frigate faces directory
+          - /path/to/your/frigate/media/clips/faces:/app/frigate_faces
+        restart: unless-stopped
+    ```
+
+2.  **Create a data directory** for `Frimmich`'s persistent state:
+    ```bash
+    mkdir -p ./data
+    ```
+
+3.  **Run Docker Compose** from the same directory as your `docker-compose.yml`:
+    ```bash
+    docker compose up -d --build
+    ```
+
+### Using Docker CLI
 
 1.  **Create a data directory:** Create a directory on your Docker host to store the persistent state file for `Frimmich`.
     ```bash
     mkdir -p /path/to/your/appdata/frimmich
     ```
 
-2.  **Run the Docker container:** Use the following command, replacing the placeholder values with your own.
+2.  **Build the Docker image** (from the `frimmich` project root):
+    ```bash
+    docker build -t frimmich:latest .
+    ```
+
+3.  **Run the Docker container:** Use the following command, replacing the placeholder values with your own.
 
     ```bash
     docker run -d \
@@ -97,10 +167,11 @@ Before running the container, you need to gather the following information:
       -e "IMMICH_API_URL=http://<your_immich_ip>:2283" \
       -e "IMMICH_API_KEY=<your_immich_api_key>" \
       -e "FRIGATE_FACES_DIR=/app/frigate_faces" \
+      -e "SYNC_SCHEDULE_INTERVAL_HOURS=0" \
       -v /path/to/your/appdata/frimmich:/app/data \
       -v /path/to/your/frigate/media/clips/faces:/app/frigate_faces \
       --restart unless-stopped \
-      ghcr.io/your-username/frimmich:latest # Replace with the final image name
+      frimmich:latest
     ```
 
     **Important Volume Mount:** The line `-v /path/to/your/frigate/media/clips/faces:/app/frigate_faces` is crucial. Replace `/path/to/your/frigate/media/clips/faces` with the actual absolute path to your Frigate `clips/faces` directory on your Docker host.
