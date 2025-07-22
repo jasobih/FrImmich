@@ -28,3 +28,8 @@
 
 ### Fixed
 - Dockerfile: Added `libboost-python-dev`, `libboost-thread-dev`, `libx11-dev`, and `libatlas-base-dev` to further support `dlib` compilation.
+
+## 0.1.6 - 2025-07-23
+
+### Removed
+- **Smart Face Trainer Feature:** Reverted the opt-in Smart Face Trainer feature, including `app/face_analyzer.py`, related API endpoints, UI elements, and build dependencies (`dlib`, `face_recognition`, `scikit-image`) due to persistent Docker build issues with `dlib` compilation.
