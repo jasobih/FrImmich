@@ -5,28 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Immich-Frigate Face Sync</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="header-content">
+            <div class="header-left">
                 <h1>Immich-Frigate Face Sync</h1>
                 <p class="version">Version: 0.1.0</p>
             </div>
-            <button id="themeToggle" class="theme-toggle">Toggle Theme</button>
+            <div class="header-right">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="icon-light">☀️</span>
+                    <span class="icon-dark">🌙</span>
+                </button>
+            </div>
         </header>
 
         <section class="config-display card">
             <h2>Configuration</h2>
-            <p><b>Immich URL:</b> <code>{{ config.IMMICH_API_URL }}</code></p>
-            <p><b>Frigate Faces Directory:</b> <code>{{ config.FRIGATE_FACES_DIR }}</code></p>
-            <p><b>Scheduled Sync:</b> 
-                {% if config.SYNC_SCHEDULE_INTERVAL_HOURS > 0 %}
-                    Every {{ config.SYNC_SCHEDULE_INTERVAL_HOURS }} hours
-                {% else %}
-                    Disabled
-                {% endif %}
-            </p>
+            <div class="config-grid">
+                <p><b>Immich URL:</b> <code>{{ config.IMMICH_API_URL }}</code></p>
+                <p><b>Frigate Faces Directory:</b> <code>{{ config.FRIGATE_FACES_DIR }}</code></p>
+                <p><b>Scheduled Sync:</b> 
+                    {% if config.SYNC_SCHEDULE_INTERVAL_HOURS > 0 %}
+                        Every {{ config.SYNC_SCHEDULE_INTERVAL_HOURS }} hours
+                    {% else %}
+                        Disabled
+                    {% endif %}
+                </p>
+            </div>
         </section>
 
         <section class="people-selection card">
@@ -79,20 +87,30 @@
 
             // Theme Toggle Logic
             const currentTheme = localStorage.getItem('theme') || 'light';
-            document.body.className = currentTheme;
-            themeToggle.textContent = currentTheme === 'dark' ? 'Light Theme' : 'Dark Theme';
+            document.documentElement.className = currentTheme; // Apply to html element
+            updateThemeToggleIcon(currentTheme);
 
             themeToggle.addEventListener('click', () => {
-                let theme = document.body.className;
+                let theme = document.documentElement.className;
                 if (theme === 'light') {
                     theme = 'dark';
                 } else {
                     theme = 'light';
                 }
-                document.body.className = theme;
+                document.documentElement.className = theme;
                 localStorage.setItem('theme', theme);
-                themeToggle.textContent = theme === 'dark' ? 'Light Theme' : 'Dark Theme';
+                updateThemeToggleIcon(theme);
             });
+
+            function updateThemeToggleIcon(theme) {
+                if (theme === 'dark') {
+                    themeToggle.querySelector('.icon-light').style.display = 'none';
+                    themeToggle.querySelector('.icon-dark').style.display = 'inline';
+                } else {
+                    themeToggle.querySelector('.icon-light').style.display = 'inline';
+                    themeToggle.querySelector('.icon-dark').style.display = 'none';
+                }
+            }
 
             let allPeople = []; // To store the fetched people data
 
