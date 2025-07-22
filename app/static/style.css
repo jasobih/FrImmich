@@ -71,9 +71,16 @@ body {
 }
 
 header {
-    text-align: center;
+    display: flex; /* Use flexbox for header */
+    justify-content: space-between; /* Space out items */
+    align-items: center; /* Vertically align items */
     margin-bottom: 40px;
-    position: relative;
+    padding-bottom: 10px; /* Add some padding below */
+    border-bottom: 2px solid var(--card-border); /* Subtle separator */
+}
+
+.header-content {
+    text-align: left; /* Align text to the left within its div */
 }
 
 header h1 {
@@ -92,9 +99,6 @@ header .version {
 }
 
 .theme-toggle {
-    position: absolute;
-    top: 0;
-    right: 0;
     background-color: var(--button-bg);
     color: white;
     border: none;
@@ -103,6 +107,7 @@ header .version {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s;
+    flex-shrink: 0; /* Prevent button from shrinking */
 }
 
 .theme-toggle:hover {
