@@ -4,6 +4,3 @@ requests
 Pillow
 APScheduler
 paho-mqtt
-dlib
-face_recognition
-scikit-image
