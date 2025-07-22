@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frimmich:
     image: ghcr.io/jasobih/frimmich:latest # Use pre-built image from GHCR
