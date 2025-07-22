@@ -44,6 +44,25 @@ Frigate+ is a paid service that offers custom model training, allowing Frigate t
 
 In essence, `Frimmich` ensures Frigate *knows who people are* based on your Immich data, while Frigate+ helps Frigate *see and understand faces better* in your unique setup. Together, they provide a powerful and accurate facial recognition solution for your self-hosted NVR.
 
+## Optimizing Face Recognition Accuracy
+
+While Frimmich efficiently transfers named faces from Immich to Frigate, it's important to understand how Frigate's face recognition works best. The Frigate developers recommend training with a limited number of high-quality, *diverse* images (typically 2-5 per person).
+
+**Why this is important:**
+
+*   **Real-world vs. Ideal Images:** Immich often contains high-resolution, front-facing photos taken in ideal conditions. Frigate, however, processes images from security cameras, which are often lower resolution, taken at various angles, in different lighting, and sometimes partially obscured.
+*   **Avoiding Over-training:** Using too many "perfect" images can lead to a model that is over-optimized for ideal conditions and performs poorly on the varied, less-than-perfect images from your cameras, resulting in false positives or negatives.
+
+**Recommendations for Frimmich Users:**
+
+To achieve the best recognition accuracy in Frigate, consider the following:
+
+1.  **Curate Immich Faces:** If possible, manually select 2-5 images per person in Immich that represent a good variety of angles, lighting conditions, and expressions. These should ideally resemble the kind of images your Frigate cameras capture.
+2.  **Limit `MAX_FACES_PER_PERSON`:** In your `docker-compose.yml` or Docker run command, set the `MAX_FACES_PER_PERSON` environment variable to a small number (e.g., `5`). This will ensure Frimmich only syncs a limited, more manageable set of faces.
+3.  **Monitor Frigate's Performance:** After syncing, observe Frigate's recognition performance. If you notice frequent false positives or negatives, consider adjusting the images used for training.
+
+By being mindful of the quality and diversity of the training images, you can significantly improve Frigate's face recognition accuracy.
+
 ## Features
 
 - **Simple Web UI:** A clean interface to trigger and monitor the sync process.
